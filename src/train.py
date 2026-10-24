@@ -18,6 +18,7 @@ from load_db import read_data
 import mlflow
 import mlflow.xgboost
 
+load_dotenv()
 
 def preprocess_data(df):
     # Preprocess the data
@@ -125,6 +126,9 @@ def log_model_to_mlflow(model, metrics, params, best_score):
     print('logging experiment to MLflow...')
     mlflow.set_experiment("Customer Churn Model")
     # Track experiment
+    mlflow.set_tracking_uri(
+        os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+    )
     with mlflow.start_run(run_name="xgboost_baseline") as run:
 
         mlflow.log_params(params)
