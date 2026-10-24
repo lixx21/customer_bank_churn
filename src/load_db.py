@@ -19,7 +19,7 @@ def read_data(table_name):
         f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     
-    df = pd.read_sql(f"SELECT * FROM {DB_SCHEMA}.{DB_TABLE_NAME};", db_engine)
+    df = pd.read_sql(f"SELECT DISTINCT * FROM {DB_SCHEMA}.{DB_TABLE_NAME};", db_engine)
     db_engine.dispose()
 
     return df
