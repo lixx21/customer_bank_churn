@@ -14,29 +14,10 @@ from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import os
 from upload_db import upload_data_to_postgres
+from load_db import read_data
 import mlflow
 import mlflow.xgboost
 
-load_dotenv()
-
-def read_data():
-    # Connect to PostgreSQL
-    DB_NAME = os.getenv("DB_NAME")
-    DB_SCHEMA = os.getenv("DB_SCHEMA")
-    DB_TABLE_NAME = os.getenv("DB_TABLE_NAME")
-    DB_HOST = os.getenv("DB_HOST")
-    DB_PORT = int(os.getenv("DB_PORT", 5432))
-    DB_PASSWORD = os.getenv("DB_PASSWORD")
-    DB_USER = os.getenv("DB_USER")
-
-    db_engine = create_engine(
-        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
-    
-    df = pd.read_sql(f"SELECT * FROM {DB_SCHEMA}.{DB_TABLE_NAME};", db_engine)
-    db_engine.dispose()
-
-    return df
 
 def preprocess_data(df):
     # Preprocess the data
@@ -150,7 +131,7 @@ baseline_params = {
     }
 
 print("Reading data from PostgreSQL...")
-df = read_data()
+df = read_data('customer_data')
 
 print("Preprocessing data...")
 df_features, df_target = preprocess_data(df)
@@ -186,11 +167,3 @@ with mlflow.start_run(run_name="xgboost_baseline") as run:
         xgb_model=trained_model,
         name="xgboost_model"
     )
-
-    # print("Metrics:", metrics)
-    # print("Model URI:", model_info.model_uri)
-
-    # print("Run ID:", run.info.run_id)
-    # print("Experiment ID:", run.info.experiment_id)
-    # print("Tracking URI:", mlflow.get_tracking_uri())
-    # print("Model URI:", model_info.model_uri)
