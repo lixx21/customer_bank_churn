@@ -17,14 +17,15 @@ def upload_data_to_postgres(df, table_name):
     db_engine = create_engine(
         f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
-    print(db_engine)
+
     print('Connection established successfully!')
     print(f'Uploading data to table: {table_name}...')
+
     # upload to Postgres
     df.to_sql(
         table_name, 
         db_engine, 
-        if_exists='replace', 
+        if_exists='append', 
         index=False
     )
 

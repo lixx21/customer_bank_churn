@@ -81,11 +81,11 @@ def evaluate_model(model, X_test, y_test):
     # cm = confusion_matrix(y_test, y_pred)
     evaluate_data = []   
     evaluate_data.append({
-        "Model": model,
+        "Model": 'XGBoost',
         "AUC Score": auc_score
     }) 
-
-    print("Evaluation results:")
+    # print(f"AUC Score: {auc_score}")
+    # print("Evaluation results:")
     df = pd.DataFrame(evaluate_data).sort_values(by="AUC Score", ascending=False)
     df["load_date"] = pd.to_datetime('today').normalize()
 
