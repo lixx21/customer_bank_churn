@@ -1,12 +1,3 @@
-version: '3'
-
-networks:
-  network:
-    driver: bridge
-
-volumes:
-  postgres_data:
-  pgadminvolume:
 
 services:
   postgres:
@@ -19,8 +10,6 @@ services:
       POSTGRES_PASSWORD: admin
     networks:
       - network
-    # env_file:
-    #   - .env
     ports:
       - "5432:5432"
     volumes:
@@ -33,20 +22,48 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    restart: always
     container_name: pgAdmin
+    restart: unless-stopped
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=123456
-      - PGADMIN_LISTEN_PORT=5050
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: "123456"
+      PGADMIN_LISTEN_PORT: 5050
     ports:
       - "5050:5050"
     volumes:
       - pgadminvolume:/var/lib/pgadmin
-    depends_on:
-      - postgres
     networks:
       - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mlflow:
+    build: .
+    container_name: customer_churn_mlflow
+    entrypoint: ["/bin/bash", "/app/start_mlflow.sh"]
+    environment:
+      PGPASSWORD: admin
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlartifacts:/mlartifacts
+      - ./start_mlflow.sh:/app/start_mlflow.sh:ro
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   pipeline:
     build: .
@@ -55,13 +72,17 @@ services:
       - .env
     environment:
       DB_HOST: postgres
-      DB_PORT: 5432
+      DB_PORT: "5432"
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    networks:
+      - network
     volumes:
       - ./data:/app/data
       - ./models:/app/models
-      - ./mlruns:/app/mlruns
     depends_on:
       postgres:
+        condition: service_healthy
+      mlflow:
         condition: service_healthy
     command: ["./run_pipeline.sh"]
 
@@ -75,13 +96,25 @@ services:
       - .env
     environment:
       DB_HOST: postgres
-      DB_PORT: 5432
+      DB_PORT: "5432"
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    networks:
+      - network
     volumes:
       - ./models:/app/models
-      - ./mlruns:/app/mlruns
       - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
+      mlflow:
+        condition: service_healthy
       pipeline:
-        condition: service_started
+        condition: service_completed_successfully
+
+networks:
+  network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadminvolume:
