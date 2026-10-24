@@ -121,7 +121,29 @@ def evaluate_model(model, X_test, y_test):
 
     return evaluation, metrics
     
+def log_model_to_mlflow(model, metrics, params, best_score):
+    print('logging experiment to MLflow...')
+    mlflow.set_experiment("Customer Churn Model")
+    # Track experiment
+    with mlflow.start_run(run_name="xgboost_baseline") as run:
 
+        mlflow.log_params(params)
+        mlflow.log_param("n_iter", 50)
+        mlflow.log_param("cv_folds", 3)
+
+        mlflow.log_metric("best_cv_roc_auc", best_score)
+        mlflow.log_metrics(metrics)
+
+        mlflow.set_tag("model_type", "XGBoost")
+        mlflow.set_tag("dataset", "customeer_churn")
+
+        # Save model to MLflow
+        model_info = mlflow.xgboost.log_model(
+            xgb_model=model,
+            name="xgboost_model"
+        )
+
+    return model_info
 
 baseline_params = {
     "objective":"binary:logistic",
@@ -133,37 +155,17 @@ baseline_params = {
 print("Reading data from PostgreSQL...")
 df = read_data('customer_data')
 
-print("Preprocessing data...")
+print("\nreprocessing data...")
 df_features, df_target = preprocess_data(df)
 
 print("Splitting data into training and testing sets...")
 X_train, X_test, y_train, y_test = split_data(df_features, df_target)
 
-print("Training the model...")
+print("\nTraining the model...")
 trained_model, best_params, best_score = train_model(baseline_params,X_train, y_train)
 
 print("Evaluating the model...")
 evaluation, metrics = evaluate_model(trained_model, X_test, y_test)
 
-## MLFLOW
-# Create an experiment
-print('logging experiment to MLflow...')
-mlflow.set_experiment("Customer Churn Model")
-# Track experiment
-with mlflow.start_run(run_name="xgboost_baseline") as run:
-
-    mlflow.log_params(best_params)
-    mlflow.log_param("n_iter", 50)
-    mlflow.log_param("cv_folds", 3)
-
-    mlflow.log_metric("best_cv_roc_auc", best_score)
-    mlflow.log_metrics(metrics)
-
-    mlflow.set_tag("model_type", "XGBoost")
-    mlflow.set_tag("dataset", "customeer_churn")
-
-    # Save model to MLflow
-    model_info = mlflow.xgboost.log_model(
-        xgb_model=trained_model,
-        name="xgboost_model"
-    )
+print("\nLogging the model and metrics to MLflow...")
+log_model_to_mlflow(trained_model, metrics, best_params, best_score)
