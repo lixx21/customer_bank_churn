@@ -21,4 +21,4 @@ exec mlflow server \
     --port 5000 \
     --allowed-hosts "mlflow:5000,localhost:5000,127.0.0.1:5000" \
     --backend-store-uri "postgresql+psycopg://postgres:admin@postgres:5432/mlflow" \
-    --default-artifact-root /mlartifacts
+    --artifacts-destination /mlartifacts
