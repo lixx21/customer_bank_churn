@@ -2,3 +2,4 @@ __pycache__
 model/xgboost_model.json
 archive.zip
 mlruns
+mlartifacts/
