@@ -6,6 +6,8 @@ from sklearn.metrics import (
     recall_score,
     f1_score
 )
+from scipy.stats import randint, uniform, loguniform
+from sklearn.model_selection import RandomizedSearchCV
 # from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from sqlalchemy import create_engine
@@ -62,13 +64,45 @@ def split_data(df_features, df_target):
     
     return X_train, X_test, y_train, y_test
 
-def train_model(params, X_train, y_train):
-    xgb_model = XGBClassifier(
-        **params
-    )
-    xgb_model.fit(X_train, y_train)
+def train_model(baseline_params, X_train, y_train):
 
-    return xgb_model
+    xgb_model = XGBClassifier(
+        **baseline_params
+    )
+
+    #Define the search space
+    param_distributions = {
+        "n_estimators": randint(100, 1001),
+        "max_depth": randint(3, 11),
+        "learning_rate": loguniform(0.01, 0.3),
+        "min_child_weight": loguniform(1, 20),
+        "subsample": uniform(0.6, 0.4),
+        "colsample_bytree": uniform(0.6, 0.4),
+        "gamma": uniform(0, 5),
+        "reg_alpha": loguniform(1e-4, 10),
+        "reg_lambda": loguniform(0.1, 10)
+    }
+
+    # Configure automatic tuning
+    search = RandomizedSearchCV(
+        estimator=xgb_model,
+        param_distributions=param_distributions,
+        n_iter=50,             # Number of parameter combinations
+        scoring="roc_auc",
+        cv=3,                   # 3-fold cross-validation
+        random_state=42,
+        n_jobs=-1,
+        verbose=1,
+        refit=True
+    )
+
+    # Run tuning
+    search.fit(X_train, y_train)
+    best_model = search.best_estimator_
+
+    best_model.fit(X_train, y_train)
+
+    return best_model, search.best_params_, search.best_score_
 
 # Evaluation
 def evaluate_model(model, X_test, y_test):
@@ -108,12 +142,7 @@ def evaluate_model(model, X_test, y_test):
     
 
 
-xgb_params = {
-    "n_estimators":500,
-    "learning_rate":0.05,
-    "max_depth":6,
-    "subsample":0.8,
-    "colsample_bytree":0.8,
+baseline_params = {
     "objective":"binary:logistic",
     "eval_metric":"auc",
     "random_state":42,
@@ -130,7 +159,7 @@ print("Splitting data into training and testing sets...")
 X_train, X_test, y_train, y_test = split_data(df_features, df_target)
 
 print("Training the model...")
-trained_model = train_model(xgb_params,X_train, y_train)
+trained_model, best_params, best_score = train_model(baseline_params,X_train, y_train)
 
 print("Evaluating the model...")
 evaluation, metrics = evaluate_model(trained_model, X_test, y_test)
@@ -139,10 +168,15 @@ evaluation, metrics = evaluate_model(trained_model, X_test, y_test)
 # Create an experiment
 mlflow.set_experiment("Customer Churn Model")
 
+
 # Track experiment
 with mlflow.start_run(run_name="xgboost_baseline"):
 
-    mlflow.log_params(xgb_params)
+    mlflow.log_params(best_params)
+    mlflow.log_param("n_iter", 50)
+    mlflow.log_param("cv_folds", 3)
+    
+    mlflow.log_metric("best_cv_roc_auc", best_score)
     mlflow.log_metrics(metrics)
 
     mlflow.set_tag("model_type", "XGBoost")
