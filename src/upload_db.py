@@ -12,6 +12,7 @@ def upload_data_to_postgres(df, table_name):
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
 
+    print(DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
     print('Creating connection to Postgres database...')
     
     db_engine = create_engine(
@@ -34,6 +35,6 @@ def upload_data_to_postgres(df, table_name):
     db_engine.dispose()
     print('Connection closed successfully!')
 
-df = pd.read_csv('data_source/churn.csv')
+df = pd.read_csv('./data_source/churn.csv')
 df['load_date'] = pd.to_datetime('today').normalize()
 upload_data_to_postgres(df, 'customer_data')

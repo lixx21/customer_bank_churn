@@ -1,0 +1,87 @@
+version: '3'
+
+networks:
+  network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadminvolume:
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    networks:
+      - network
+    # env_file:
+    #   - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    container_name: pgAdmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=123456
+      - PGADMIN_LISTEN_PORT=5050
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadminvolume:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - network
+
+  pipeline:
+    build: .
+    container_name: customer_churn_pipeline
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["./run_pipeline.sh"]
+
+  app:
+    build: .
+    container_name: customer_churn_app
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pipeline:
+        condition: service_started
