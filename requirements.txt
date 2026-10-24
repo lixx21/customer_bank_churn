@@ -1,0 +1,10 @@
+pandas
+lightgbm 
+xgboost
+scikit-learn
+matplotlib
+sqlalchemy 
+psycopg[binary]
+mlflow
+fastapi
+python-dotenv
