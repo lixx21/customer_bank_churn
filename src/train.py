@@ -108,7 +108,7 @@ def train_model(baseline_params, X_train, y_train):
 def evaluate_model(model, X_test, y_test):
     y_proba = model.predict_proba(X_test)[:, 1]
     y_pred = model.predict(X_test)
-
+    
     auc_score = roc_auc_score(y_test, y_proba)
     # report = classification_report(y_test, y_pred)
     # cm = confusion_matrix(y_test, y_pred)
@@ -166,16 +166,15 @@ evaluation, metrics = evaluate_model(trained_model, X_test, y_test)
 
 ## MLFLOW
 # Create an experiment
+print('logging experiment to MLflow...')
 mlflow.set_experiment("Customer Churn Model")
-
-
 # Track experiment
-with mlflow.start_run(run_name="xgboost_baseline"):
+with mlflow.start_run(run_name="xgboost_baseline") as run:
 
     mlflow.log_params(best_params)
     mlflow.log_param("n_iter", 50)
     mlflow.log_param("cv_folds", 3)
-    
+
     mlflow.log_metric("best_cv_roc_auc", best_score)
     mlflow.log_metrics(metrics)
 
@@ -188,5 +187,10 @@ with mlflow.start_run(run_name="xgboost_baseline"):
         name="xgboost_model"
     )
 
-    print("Metrics:", metrics)
-    print("Model URI:", model_info.model_uri)
+    # print("Metrics:", metrics)
+    # print("Model URI:", model_info.model_uri)
+
+    # print("Run ID:", run.info.run_id)
+    # print("Experiment ID:", run.info.experiment_id)
+    # print("Tracking URI:", mlflow.get_tracking_uri())
+    # print("Model URI:", model_info.model_uri)

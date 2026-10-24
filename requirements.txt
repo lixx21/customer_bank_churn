@@ -8,3 +8,5 @@ psycopg[binary]
 mlflow
 fastapi
 python-dotenv
+fastapi[all]
+scipy
