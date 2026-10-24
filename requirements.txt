@@ -10,3 +10,4 @@ fastapi
 python-dotenv
 fastapi[all]
 scipy
+streamlit
