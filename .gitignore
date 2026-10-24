@@ -1,4 +1,3 @@
-.env
 __pycache__
 model/xgboost_model.json
 archive.zip
