@@ -1,6 +1,7 @@
 import mlflow
 from load_db import read_data
 from upload_db import upload_data_to_postgres
+import joblib
 
 def load_model_from_best_run():
     # Get experiment
@@ -30,12 +31,22 @@ def predict_churn(model, input_data):
         'CreditScore',
         'Tenure',
         'Balance',
+        'Age',
+        'Geography',
         'NumOfProducts',
         'IsActiveMember',
         'EstimatedSalary'
     ]
 
+    scaler = joblib.load("models/scaler.joblib")
+    encoder = joblib.load("models/encoder.joblib")
+
     input_data = input_data[columns]
+    input_data[['Geography']] = encoder.fit_transform(input_data[['Geography']])
+    input_data[['Geography']] = input_data[['Geography']].convert_dtypes(int)
+
+    input_data = scaler.transform(input_data)
+
     y_proba = model.predict_proba(input_data)[:, 1]
     y_pred = model.predict(input_data)
     return y_proba, y_pred

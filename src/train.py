@@ -8,6 +8,7 @@ from sklearn.metrics import (
 )
 from scipy.stats import randint, uniform, loguniform
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 # from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from sqlalchemy import create_engine
@@ -17,6 +18,7 @@ from upload_db import upload_data_to_postgres
 from load_db import read_data
 import mlflow
 import mlflow.xgboost
+import joblib
 
 load_dotenv()
 
@@ -26,6 +28,8 @@ def preprocess_data(df):
         'CreditScore',
         'Tenure',
         'Balance',
+        'Age',
+        'Geography',
         'NumOfProducts',
         'IsActiveMember',
         'EstimatedSalary',
@@ -40,10 +44,33 @@ def preprocess_data(df):
     return df_features, df_target   
 
 def split_data(df_features, df_target):
+    
+    #one hot encoding
+    encoder = OrdinalEncoder()
+    df_features[['Geography']] = encoder.fit_transform(df_features[['Geography']])
+    df_features[['Geography']] = df_features[['Geography']].convert_dtypes(int)
+
+
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         df_features, df_target, test_size=0.3, random_state=42)
-    
+
+    #scaler
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train) #learns the mean and stdev and apply it
+    X_test = scaler.transform(X_test) #apply using the X_train fit / standard deviation
+
+    #save the preprocessing
+    joblib.dump(
+        scaler,
+        "./models/scaler.joblib"
+    )
+
+    joblib.dump(
+        encoder,
+        "./models/encoder.joblib"
+    )
+
     return X_train, X_test, y_train, y_test
 
 def train_model(baseline_params, X_train, y_train):
