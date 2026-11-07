@@ -11,3 +11,4 @@ python-dotenv
 fastapi[all]
 scipy
 streamlit
+ollama

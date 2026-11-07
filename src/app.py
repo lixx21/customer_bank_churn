@@ -1,6 +1,6 @@
 import streamlit as st
 from load_db import read_data
-import mlflow
+from llm import llm_inference
 
 def main(df, roc_data):
     st.set_page_config(
@@ -27,16 +27,31 @@ def main(df, roc_data):
     view = df
     # df.sort_values(by='predicted_churn_probability', ascending=False).head(10)
 
-    st.dataframe(
+    event = st.dataframe(
         view[['Surname', 'Gender', 'Geography', 'predicted_churn_probability']],
         hide_index=True,
         selection_mode="single-row",
         column_config={
             "Surname": "Customer",
             "predicted_churn_probability": st.column_config.ProgressColumn("Risk", min_value=0, max_value=100, format="%.1f%%"),
-        }
+        },
+        use_container_width=True,
+        on_select="rerun"
 
     )
+    # Get selected row
+    if event.selection.rows:
+        selected_index = event.selection.rows[0] # check selected row indices
+        selected_customer = df.iloc[selected_index] # get the selected customer data based on the index
+        with st.spinner("Loading customer analysis..."):
+            llm_response = llm_inference(selected_customer)
+
+        st.subheader("Customer Churn Analysis")
+        st.write(f"**Customer:** {selected_customer['Surname']}")
+        st.write(f"**Gender**: {selected_customer['Gender']}")
+        st.write(f"**Age**: {selected_customer['Age']}")
+        st.write(llm_response)
+
 
 predicted_data = read_data('predicted_churn')
 roc_auc = read_data('churn_model_evaluation_results')
